@@ -4,26 +4,33 @@
  * @date    :2025/12/16
  * */
 
-#ifndef __SFTP_CLIENT_H
-#define __SFTP_CLIENT_H
+#ifndef SFTP_CLIENT_H
+#define SFTP_CLIENT_H
 ///头文件声明
 #include <QObject>
 #include <libssh/libssh.h>
 #include <QFile>
 #include <QDebug>
+#include <utility>
 ///结构体枚举声明
 struct sRemoteDeviceInfo {
     QString host;           //远程设备ip
-    int port;               //远程设备端口
+    int port{};               //远程设备端口
     QString username;       //远程设备用户名
     QString password;       //远程设备密码
+    sRemoteDeviceInfo() = default;
+    sRemoteDeviceInfo(QString  host, const int port, QString  username, QString  password)
+        : host(std::move(host)), port(port), username(std::move(username)), password(std::move(password)) {}
 };
 struct sTrasFilePath {
     QString hostPath;       //本地端文件地址
     QString remotePath;     //远程设备文件地址
+    sTrasFilePath() = default;
+    sTrasFilePath(QString  hostPath, QString  remotePath)
+        : hostPath(std::move(hostPath)), remotePath(std::move(remotePath)) {}
 };
 
-class SftpClient : public QObject {
+class SftpClient final : public QObject {
     Q_OBJECT
 
 public:
@@ -52,7 +59,12 @@ public:
      * */
     void DownloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path);
 
-    void ExecuteCommand();
+    /**
+     * @brief       :在远端设备执行命令.
+     * @param [in]  :info(远程设备信息)
+     * @param [in]  :cmd(执行命令)
+     * */
+    void ExecuteCommand(const sRemoteDeviceInfo &info, const QString &cmd);
 
 signals:
     /**
@@ -67,6 +79,12 @@ signals:
      * @param [in]  :error(完成/错误信息)
      * */
     void finished(bool success, const QString &error);
+    /**
+     * @brief       :执行命令回读.
+     * @param [in]  :success(停止标志)
+     * @param [in]  :error(完成/错误信息)
+     * */
+    void commandExecuted(const QString &output);
 
 private:
     ssh_session m_session;      //远程连接句柄
@@ -84,4 +102,6 @@ private:
     void CleanupSession();
 };
 
-#endif // __SFTP_CLIENT_H
+Q_DECLARE_METATYPE(sRemoteDeviceInfo)
+Q_DECLARE_METATYPE(sTrasFilePath)
+#endif // SFTP_CLIENT_H

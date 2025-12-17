@@ -6,21 +6,21 @@
 
 // Windows 平台兼容定义
 #ifdef _WIN32
-    #include <io.h>
-    #ifndef O_WRONLY
-        #define O_WRONLY _O_WRONLY
-    #endif
-    #ifndef O_CREAT
-        #define O_CREAT _O_CREAT
-    #endif
-    #ifndef O_TRUNC
-        #define O_TRUNC _O_TRUNC
-    #endif
-    #ifndef O_RDONLY
-        #define O_RDONLY _O_RDONLY
-    #endif
+#include <io.h>
+#ifndef O_WRONLY
+#define O_WRONLY _O_WRONLY
+#endif
+#ifndef O_CREAT
+#define O_CREAT _O_CREAT
+#endif
+#ifndef O_TRUNC
+#define O_TRUNC _O_TRUNC
+#endif
+#ifndef O_RDONLY
+#define O_RDONLY _O_RDONLY
+#endif
 #else
-    #include <unistd.h>
+#include <unistd.h>
 #endif
 
 SftpClient::SftpClient(QObject *parent) : QObject(parent), m_session(nullptr) {
@@ -43,7 +43,7 @@ void SftpClient::CleanupSession() {
 }
 
 bool SftpClient::ConnectToServer(const sRemoteDeviceInfo &info) {
-    CleanupSession();  // 清理之前的会话
+    CleanupSession(); // 清理之前的会话
 
     // 创建 SSH 会话
     m_session = ssh_new();
@@ -73,6 +73,7 @@ bool SftpClient::ConnectToServer(const sRemoteDeviceInfo &info) {
 }
 
 void SftpClient::UploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path) {
+    qDebug() << "开始上传文件:" << path.hostPath << "->" << path.remotePath;
     // 1. 打开本地文件
     m_localFile.setFileName(path.hostPath);
     if (!m_localFile.open(QIODevice::ReadOnly)) {
@@ -99,7 +100,7 @@ void SftpClient::UploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &
 
     // 4. 打开远程文件
     sftp_file remote_file = sftp_open(sftp, path.remotePath.toUtf8().constData(),
-                                     O_WRONLY | O_CREAT | O_TRUNC, 0644);
+                                      O_WRONLY | O_CREAT | O_TRUNC, 0644);
     if (!remote_file) {
         sftp_free(sftp);
         emit finished(false, "创建远程文件失败");
@@ -117,17 +118,17 @@ void SftpClient::UploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &
         if (bytesRead <= 0) break;
 
         // 写入远程文件
-        ssize_t nwritten = sftp_write(remote_file, buffer, bytesRead);
-        if (nwritten != bytesRead) {
+        ssize_t byteWriten = sftp_write(remote_file, buffer, bytesRead);
+        if (byteWriten != bytesRead) {
             sftp_close(remote_file);
             sftp_free(sftp);
             emit finished(false, "写入失败: " + QString(sftp_get_error(sftp)));
             return;
         }
 
-        bytesSent += nwritten;
-        emit progress(bytesSent, totalSize);  // 发送进度信号
-        QThread::msleep(10);  // 避免 CPU 占用过高
+        bytesSent += byteWriten;
+        emit progress(bytesSent, totalSize); // 发送进度信号
+        QThread::msleep(10); // 避免 CPU 占用过高
     }
 
     // 6. 清理资源
@@ -171,7 +172,7 @@ void SftpClient::DownloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath
         emit finished(false, "获取文件大小失败");
         return;
     }
-    qint64 totalSize = file_attr->size;
+    auto totalSize = static_cast<qint64>(file_attr->size);
     sftp_attributes_free(file_attr);
 
     // 5. 创建本地文件
@@ -210,8 +211,8 @@ void SftpClient::DownloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath
         }
 
         bytesReceived += bytesWritten;
-        emit progress(bytesReceived, totalSize);  // 发送进度信号
-        QThread::msleep(10);  // 避免 CPU 占用过高
+        emit progress(bytesReceived, totalSize); // 发送进度信号
+        QThread::msleep(10); // 避免 CPU 占用过高
     }
 
     // 7. 清理资源
@@ -219,4 +220,85 @@ void SftpClient::DownloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath
     sftp_free(sftp);
     localFile.close();
     emit finished(true, "下载成功");
+}
+
+void SftpClient::ExecuteCommand(const sRemoteDeviceInfo &info, const QString &cmd) {
+    //连接服务器
+    if (!ConnectToServer(info)) {
+        return;
+    }
+
+    //创建命令通道
+    ssh_channel channel = ssh_channel_new(m_session);
+    if (!channel) {
+        emit finished(false, "创建命令通道失败");
+        return;
+    }
+
+    //打开通道
+    if (ssh_channel_open_session(channel) != SSH_OK) {
+        ssh_channel_free(channel);
+        emit finished(false, "打开通道失败");
+        return;
+    }
+
+    // 执行命令
+    if (ssh_channel_request_exec(channel, cmd.toUtf8().constData()) != SSH_OK) {
+        qDebug() << "执行命令失败";
+        ssh_channel_close(channel);
+        ssh_channel_free(channel);
+        emit finished(false, "执行命令失败");
+        return;
+    }
+
+    // 读取输出
+    char buffer[1024];
+    int nbytes;
+    QString output;
+
+    while ((nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 0))) {
+        if (nbytes < 0) {
+            qDebug() << "读取输出错误";
+            break;
+        }
+        qDebug() << buffer;
+        output.append(QByteArray(buffer, nbytes));
+    }
+
+    // 读取错误输出
+    QString errorOutput;
+    while ((nbytes = ssh_channel_read(channel, buffer, sizeof(buffer), 1))) {
+        if (nbytes < 0) {
+            qDebug() << "读取错误输出错误";
+            break;
+        }
+        errorOutput.append(QByteArray(buffer, nbytes));
+    }
+
+    // 获取退出状态
+    if (ssh_channel_send_eof(channel) != SSH_OK) {
+        qDebug() << "发送EOF失败";
+    }
+
+    // 获取退出状态和信号信息（使用新函数）
+    uint32_t exit_code = 0;
+    char *exit_signal = nullptr;
+    int core_dumped = 0;
+
+    int rc = ssh_channel_get_exit_state(channel, &exit_code, &exit_signal, &core_dumped);
+    if (rc == SSH_OK) {
+        // 如果有退出信号，可以记录或处理
+        if (exit_signal) {
+            qDebug() << "命令被信号终止:" << exit_signal << (core_dumped ? " (core dumped)" : "");
+            // 释放信号字符串
+            ssh_string_free_char(exit_signal);
+        }
+    } else {
+        // 获取退出状态失败，设置一个非零值
+        qDebug() << "获取退出状态失败";
+    }
+
+    // 关闭通道
+    ssh_channel_close(channel);
+    ssh_channel_free(channel);
 }
