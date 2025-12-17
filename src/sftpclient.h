@@ -7,11 +7,11 @@
 #ifndef SFTP_CLIENT_H
 #define SFTP_CLIENT_H
 ///头文件声明
-#include <QObject>
 #include <libssh/libssh.h>
 #include <QFile>
 #include <QDebug>
 #include <utility>
+#include <QElapsedTimer>
 ///结构体枚举声明
 struct sRemoteDeviceInfo {
     QString host;           //远程设备ip
@@ -22,13 +22,15 @@ struct sRemoteDeviceInfo {
     sRemoteDeviceInfo(QString  host, const int port, QString  username, QString  password)
         : host(std::move(host)), port(port), username(std::move(username)), password(std::move(password)) {}
 };
-struct sTrasFilePath {
+struct sTransFilePath {
     QString hostPath;       //本地端文件地址
     QString remotePath;     //远程设备文件地址
-    sTrasFilePath() = default;
-    sTrasFilePath(QString  hostPath, QString  remotePath)
+    sTransFilePath() = default;
+    sTransFilePath(QString  hostPath, QString  remotePath)
         : hostPath(std::move(hostPath)), remotePath(std::move(remotePath)) {}
 };
+Q_DECLARE_METATYPE(sRemoteDeviceInfo)
+Q_DECLARE_METATYPE(sTransFilePath)
 
 class SftpClient final : public QObject {
     Q_OBJECT
@@ -50,14 +52,14 @@ public:
      * @param [in]  :info(远程设备信息)
      * @param [in]  :path(传输文件路径)
      * */
-    void UploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path);
+    void UploadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path);
 
     /**
      * @brief       :从远端设备下载文件.
      * @param [in]  :info(远程设备信息)
      * @param [in]  :path(传输文件路径)
      * */
-    void DownloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path);
+    void DownloadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path);
 
     /**
      * @brief       :在远端设备执行命令.
@@ -65,6 +67,10 @@ public:
      * @param [in]  :cmd(执行命令)
      * */
     void ExecuteCommand(const sRemoteDeviceInfo &info, const QString &cmd);
+    /**
+     * @brief       :取消文件传输操作.
+     * */
+    void cancelOperation();
 
 signals:
     /**
@@ -87,8 +93,9 @@ signals:
     void commandExecuted(const QString &output);
 
 private:
-    ssh_session m_session;      //远程连接句柄
-    QFile m_localFile;          //读写文件临时句柄
+    ssh_session m_session;                                  //远程连接句柄
+    QAtomicInteger<bool>  m_cancelRequested = false;     //取消操作句柄
+    QElapsedTimer m_operationTimer;                         //超时计时器
 
     /**
      * @brief       :连接到远程设备.
@@ -101,7 +108,4 @@ private:
      * */
     void CleanupSession();
 };
-
-Q_DECLARE_METATYPE(sRemoteDeviceInfo)
-Q_DECLARE_METATYPE(sTrasFilePath)
 #endif // SFTP_CLIENT_H

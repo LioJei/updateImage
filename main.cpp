@@ -6,7 +6,7 @@ int main(int argc, char *argv[]) {
 
     // 注册自定义类型，以便用于跨线程的信号槽传递
     qRegisterMetaType<sRemoteDeviceInfo>("sRemoteDeviceInfo");
-    qRegisterMetaType<sTrasFilePath>("sTrasFilePath");
+    qRegisterMetaType<sTransFilePath>("sTransFilePath");
     MainWindow wim;
     wim.show();
     

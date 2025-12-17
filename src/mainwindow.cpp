@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+
+#include <QApplication>
 #include <QFileDialog>
 #include <QStatusBar>
 #include <QThread>
@@ -6,7 +8,7 @@
 
 MainWindow::MainWindow(QMainWindow *parent) : QMainWindow(parent){
     setWindowTitle("远程更新");
-    this->resize(800, 600);
+    this->resize(1600, 1200);
     m_statusBar = new QStatusBar(this);
     setStatusBar(m_statusBar);
     mainWidget = new QWidget;
@@ -34,7 +36,7 @@ MainWindow::MainWindow(QMainWindow *parent) : QMainWindow(parent){
     mainLayout->addWidget(m_progressBar, 1, 1, 1, 4);
     mainLayout->addWidget(m_startTransBtn, 1, 5, 1, 1);
     mainWidget->setLayout(mainLayout);
-
+    // 连接按钮信号槽
     connect(m_fileUrlBtn, &QPushButton::clicked, this, &MainWindow::onFileUrlBtnClicked);
     connect(m_startTransBtn, &QPushButton::clicked, this, &MainWindow::onStartTransBtnClicked);
 
@@ -83,9 +85,9 @@ void MainWindow::onStartTransBtnClicked(){
     m_progressBar->setValue(0);
     m_progressLabel->setVisible(true);
     // 准备参数
-    const QString str = m_fileUrlLineEdit->text().split("/").last();
+    const QString fileName = m_fileUrlLineEdit->text().split("/").last();
     const sRemoteDeviceInfo deviceInfo("192.168.80.128",22,"rpdzkj"," ");
-    const sTrasFilePath tranPath(m_fileUrlLineEdit->text(),"/home/rpdzkj/setup/" + str);
+    const sTransFilePath tranPath(m_fileUrlLineEdit->text(),"/home/rpdzkj/" + fileName);
 
     // 禁用按钮防止重复点击
     m_startTransBtn->setEnabled(false);
@@ -93,7 +95,7 @@ void MainWindow::onStartTransBtnClicked(){
     // 使用工作线程中的工作对象执行上传
     QMetaObject::invokeMethod(m_sftpThread, "uploadFile",
         Q_ARG(sRemoteDeviceInfo, deviceInfo),
-        Q_ARG(sTrasFilePath, tranPath));
+        Q_ARG(sTransFilePath, tranPath));
 }
 
 void MainWindow::onUploadFinished(const bool success, const QString &error) {
@@ -109,8 +111,24 @@ void MainWindow::onUploadFinished(const bool success, const QString &error) {
 }
 
 void MainWindow::onProgress(const qint64 current, const qint64 total) const {
-    if (total > 0) {
-        const int progress = static_cast<int>((current * 100) / total);
-        m_progressBar->setValue(progress);
+    // 避免除零错误
+    if (total <= 0) return;
+
+    // 计算百分比
+    const int percent = static_cast<int>((current * 100) / total);
+
+    // 避免不必要的更新
+    if (percent != m_progressBar->value()) {
+        m_progressBar->setValue(percent);
+    }
+
+    // 更新状态栏信息
+    static int lastPercent = -1;
+    if (percent != lastPercent && percent % 10 == 0) {
+        const QString status = QString("已传输: %1/%2 MB")
+                         .arg(static_cast<double>(current) / (1024.0 * 1024.0), 0, 'f', 1)
+                         .arg(static_cast<double>(total) / (1024.0 * 1024.0), 0, 'f', 1);
+        m_statusBar->showMessage(status);
+        lastPercent = percent;
     }
 }

@@ -25,14 +25,14 @@ public slots:
      * @param [in]  :info(远程设备信息)
      * @param [in]  :path(传输文件路径)
      * */
-    void uploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path);
+    void uploadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path);
 
     /**
      * @brief       :从远端设备下载文件透传接口.
      * @param [in]  :info(远程设备信息)
      * @param [in]  :path(传输文件路径)
      * */
-    void downloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path);
+    void downloadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path);
 
     /**
      * @brief       :在远端设备执行命令透传接口.
@@ -40,6 +40,7 @@ public slots:
      * @param [in]  :cmd(执行命令)
      * */
     void executeCommand(const sRemoteDeviceInfo &info, const QString &cmd);
+    void cancelOperation();
 
 signals:
     /**

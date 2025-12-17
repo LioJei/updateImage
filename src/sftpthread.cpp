@@ -9,14 +9,18 @@ SftpThread::SftpThread(QObject *parent) : QObject(parent) {
     connect(&m_sftpClient, &SftpClient::commandExecuted, this, &SftpThread::commandExecuted);
 }
 
-void SftpThread::uploadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path) {
+void SftpThread::uploadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path) {
     m_sftpClient.UploadFile(info, path);
 }
 
-void SftpThread::downloadFile(const sRemoteDeviceInfo &info, const sTrasFilePath &path) {
+void SftpThread::downloadFile(const sRemoteDeviceInfo &info, const sTransFilePath &path) {
     m_sftpClient.DownloadFile(info, path);
 }
 
 void SftpThread::executeCommand(const sRemoteDeviceInfo &info, const QString &cmd) {
     m_sftpClient.ExecuteCommand(info, cmd);
+}
+
+void SftpThread::cancelOperation() {
+    m_sftpClient.cancelOperation();
 }
