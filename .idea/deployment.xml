@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="Remote-pad (edb22c39-96ce-4ec0-bb67-550dcb1723d8)">
+        <serverdata>
+          <mappings>
+            <mapping deploy="/home/exe/PadQtDemo" local="$PROJECT_DIR$" />
+          </mappings>
+          <excludedPaths>
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-remote-pad" />
+            <excludedPath local="true" path="$PROJECT_DIR$/cmake-build-debug-remote-pad" />
+          </excludedPaths>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>
