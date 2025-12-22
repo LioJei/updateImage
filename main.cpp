@@ -1,4 +1,6 @@
 #include "mainwindow.h"
+#include <json/json.h>
+#include <shlwapi.h>
 #include <QApplication>
 
 int main(int argc, char *argv[]) {

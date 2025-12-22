@@ -28,6 +28,7 @@ MainWindow::MainWindow(QMainWindow *parent) : QMainWindow(parent){
     connect(m_fileUrlBtn, &QPushButton::clicked, this, &MainWindow::onFileUrlBtnClicked);
     connect(m_startTransBtn, &QPushButton::clicked, this, &MainWindow::onStartTransBtnClicked);
     connect(m_ipBtn, &QPushButton::clicked, this, &MainWindow::onIpBtnClicked);
+    connect(m_startUpdateBtn, &QPushButton::clicked, this, &MainWindow::onUpdateBtnClicked);
 
     // 启动线程
     m_workerThread->start();
@@ -64,7 +65,8 @@ void MainWindow::setupUI() {
     m_fileUrlLabel->setWordWrap(true);
 
     //第3行
-    m_startTransBtn = new QPushButton("更新");
+    m_startTransBtn = new QPushButton("上传");
+    m_startUpdateBtn = new QPushButton("更新");
     m_progressLabel = new QLabel("上传进度：");
     m_progressLabel->setWordWrap(true);
     m_progressLabel->setVisible(false);
@@ -90,8 +92,9 @@ void MainWindow::setupUI() {
 
     //第3行
     mainLayout->addWidget(m_progressLabel, 2, 0, 1, 1);
-    mainLayout->addWidget(m_progressBar, 2, 1, 1, 4);
-    mainLayout->addWidget(m_startTransBtn, 2, 5, 1, 1);
+    mainLayout->addWidget(m_progressBar, 2, 1, 1, 3);
+    mainLayout->addWidget(m_startTransBtn, 2, 4, 1, 1);
+    mainLayout->addWidget(m_startUpdateBtn, 2, 5, 1, 1);
 
     mainWidget->setLayout(mainLayout);
 }
@@ -101,6 +104,25 @@ void MainWindow::onIpBtnClicked() {
     m_curIpLabel->setText("当前IP: " + m_ip);
     m_statusBar->showMessage("当前IP:" + m_ip, 3000);
 }
+
+void MainWindow::onUpdateBtnClicked() {
+    // 检查IP是否配置
+    if (m_ip.isEmpty()) {
+        QMessageBox::warning(this, "警告", "请先配置设备IP");
+        return;
+    }
+    const sRemoteDeviceInfo deviceInfo(m_ip,22,DEFAULT_USERNAME,DEFAULT_PASSWORD);
+    QMetaObject::invokeMethod(m_sftpThread, "executeCommand",
+        Qt::QueuedConnection,
+        Q_ARG(sRemoteDeviceInfo, deviceInfo),
+        Q_ARG(QString, "cd /home/rpdzkj && mv *.img update.img"));
+
+    QMetaObject::invokeMethod(m_sftpThread, "executeCommand",
+        Qt::QueuedConnection,
+        Q_ARG(sRemoteDeviceInfo, deviceInfo),
+        Q_ARG(QString, "cd /home/rpdzkj && chmod +x ./start_update.sh && ./start_update.sh"));
+}
+
 
 void MainWindow::onFileUrlBtnClicked() {
     // 创建文件对话框

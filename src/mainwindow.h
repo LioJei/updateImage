@@ -45,6 +45,7 @@ private slots:
      * @brief       :IP配置响应槽函数.
      * */
     void onIpBtnClicked();
+    void onUpdateBtnClicked();
 
     /**
      * @brief       :传输终止响应槽函数.
@@ -114,6 +115,7 @@ private:
     QLabel *m_progressLabel{}; //进度标签
     QProgressBar *m_progressBar{}; //传输进度条
     QPushButton *m_startTransBtn{}; //开始传输按钮
+    QPushButton *m_startUpdateBtn{}; //开始更新按钮
     //[线程工作对象]
     SftpThread *m_sftpThread; //sftp线程句柄
     QThread *m_workerThread; //任务线程句柄
